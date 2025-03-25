@@ -3,18 +3,68 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Email:", email);
-    console.log("Password:", password);
+    setError("");
+    setIsLoading(true);
 
-    // Simulate successful login
-    router.push("/home"); // Redirect to the Home Page
+    try {
+      console.log("Attempting login with email:", email);
+
+      const response = await fetch("/api/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      console.log("Response status:", response.status);
+
+      // Check if response is actually JSON before parsing
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("Expected JSON but got:", contentType);
+        throw new Error("Server returned an invalid response format");
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Login failed");
+      }
+
+      console.log("Login successful, storing data");
+
+      // Store authentication data
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+
+      // Redirect to profile page
+      router.push("/home");
+    } catch (error) {
+      console.error("Login error:", error);
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("An unexpected error occurred");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -23,6 +73,12 @@ const LoginPage: React.FC = () => {
         <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
           Welcome Back
         </h1>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           {/* Email Input */}
@@ -70,23 +126,29 @@ const LoginPage: React.FC = () => {
                 Remember me
               </label>
             </div>
-            <a href="#" className="text-sm text-blue-600 hover:text-blue-500">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-blue-600 hover:text-blue-500"
+            >
               Forgot Password?
-            </a>
+            </Link>
           </div>
 
           {/* Sign In Button */}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
+            className={`w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              isLoading ? "opacity-75 cursor-not-allowed" : ""
+            }`}
           >
-            Sign In
+            {isLoading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         {/* Sign Up Link */}
         <p className="mt-6 text-center text-sm text-gray-600">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/signup" className="text-blue-600 hover:text-blue-500">
             Sign up
           </Link>
