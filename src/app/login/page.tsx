@@ -1,8 +1,9 @@
-"use client"; // Enable client-side interactivity
+"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -14,59 +15,34 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    
+    // Basic validation
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      console.log("Attempting login with email:", email);
-
-      const response = await fetch("/api/signin", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
       });
 
-      console.log("Response status:", response.status);
-
-      // Check if response is actually JSON before parsing
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        console.error("Expected JSON but got:", contentType);
-        throw new Error("Server returned an invalid response format");
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        router.push("/home");
       }
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Login failed");
-      }
-
-      console.log("Login successful, storing data");
-
-      // Store authentication data
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-
-      if (data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-      }
-
-      // Redirect to profile page
-      router.push("/home");
     } catch (error) {
       console.error("Login error:", error);
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("An unexpected error occurred");
-      }
+      setError("An unexpected error occurred");
     } finally {
       setIsLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">

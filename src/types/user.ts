@@ -31,3 +31,6 @@ export interface UserData {
   name: string;
   email: string;
 }
+
+// types/user.ts
+// src/types/user.ts

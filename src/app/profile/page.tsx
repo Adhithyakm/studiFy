@@ -29,9 +29,14 @@ export default function ProfilePage() {
           router.push("/login");
           return;
         }
-
+        if (response.status === 404) {
+          // Profile doesn't exist yet
+          router.push("/profile/create"); // Or show create profile UI
+          return;
+        }
         if (!response.ok) {
           throw new Error(`Failed to fetch profile: ${response.statusText}`);
+//              ↑ Backticks added (` `` `)
         }
 
         const data = await response.json();
